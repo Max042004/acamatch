@@ -1,0 +1,4 @@
+project_id = "acamatch"
+
+[functions.analyze]
+verify_jwt = false
