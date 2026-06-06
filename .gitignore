@@ -1,8 +1,10 @@
 .DS_Store
 *.log
 
-# Supabase CLI local state (per-developer, not for sharing)
-supabase/.temp/
-supabase/.branches/
-supabase/.env
-supabase/.env.local
+# deps
+node_modules/
+frontend/node_modules/
+
+# env / secrets
+.env
+.env.local

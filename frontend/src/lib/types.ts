@@ -1,27 +1,64 @@
-export type TRL = "HIGH" | "MEDIUM" | "LOW"
+// The IR — one structured model, rendered two ways (規格 + PoC).
 
-export interface AnalysisResult {
-  tech_direction: string
-  tech_keywords: string[]
-  recommended_professors: {
-    name: string
-    school: string
-    expertise: string
-  }[]
-  trl_score: TRL
-  trl_explanation: string
-  roi_estimate: string
-  implementation_advice: string
-  related_paper_count: number
+export type ReqStatus = "confirmed" | "assumed" | "open"
+
+export interface Requirement {
+  id: string
+  statement: string
+  status: ReqStatus
+  source?: string
 }
 
-export interface Report {
+export interface OpenQuestion {
   id: string
-  session_id: string
-  business_problem: string
-  industry: string | null
-  key_metrics: string | null
-  budget_range: string | null
-  result: AnalysisResult
-  created_at: string
+  question: string
+  why?: string
+  options?: string[]
+}
+
+export type ComponentType =
+  | "navbar"
+  | "hero"
+  | "heading"
+  | "text"
+  | "field"
+  | "select"
+  | "timeslots"
+  | "calendar"
+  | "button"
+  | "card"
+  | "list"
+  | "table"
+  | "steps"
+  | "stat"
+  | "badge"
+  | "notice"
+  | "divider"
+  | "image"
+
+export interface PocComponent {
+  id: string
+  type: ComponentType
+  reqRef?: string
+  props: Record<string, any>
+}
+
+export interface Screen {
+  id: string
+  name: string
+  components: PocComponent[]
+}
+
+export interface ProjectSpec {
+  title: string
+  one_liner: string
+  assistant_message: string
+  requirements: Requirement[]
+  open_questions: OpenQuestion[]
+  screens: Screen[]
+}
+
+export interface ChatMsg {
+  role: "user" | "assistant"
+  text: string
 }

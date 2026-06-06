@@ -1,202 +1,64 @@
-# AcaMatch AI — MVP
+# Spec Cockpit — 邊講邊出 PoC
 
-> The Research Discovery Layer for the AI Economy
-> 用商業語言提問,AI 自動產出技術轉型藍圖。
+> 在對話現場，把一句模糊的需求同時長成「規格」與「可點擊的 PoC」。
+> 鎖定招標 / 接案場景：開標方常常講不清楚自己要什麼，需求是邊談邊長出來的。
 
-MVP stack:
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind + shadcn-style UI
-- **Backend**: Supabase (Postgres + Edge Functions)
-- **AI**: OpenAI Chat Completions (gpt-4o-mini by default)
+## 跟 v0 / bolt 不一樣的地方
 
-The OpenAI key never reaches the browser — the frontend calls a Supabase Edge Function which proxies OpenAI and writes the result to Postgres.
+一般「prompt → 生網站」工具，把你的話當成「已經想清楚的規格」直接生成。
+Spec Cockpit 相反：
 
-```
-React  ─►  Supabase Edge Function /analyze  ─►  OpenAI API
-                       │
-                       └─►  reports (Postgres)
-                                  ▲
-React  ─────────────────  read history  ───┘
-```
+1. **主動釐清**：把模糊的話拆成需求，明確標出「哪些是 AI 替你假設的」、反問「哪裡還沒講清楚」（招標流程裡的「釋疑」）。
+2. **規格與 PoC 是同一份東西的兩面**：AI 維護「一份」結構化需求模型（ProjectSpec）。左邊渲染成可點擊原型、右邊渲染成規格書，永遠同步。
+3. **確認是「點」出來的，不是「打字」出來的**：人沒辦法把需求寫清楚，但看到畫面能指出「這塊 OK / 這塊不對」。在 PoC 上點「這樣 OK」→ 對應需求即時升級成「已確認」、沉澱進規格（純前端、不等 LLM）；點「不太對」→ 回灌對話讓 AI 改。
 
----
-
-## Project layout
+## 架構
 
 ```
-acamatch/
-├── frontend/                       # Vite React app
-│   ├── src/
-│   │   ├── pages/                  # Landing / Analyze / Reports
-│   │   ├── components/ui/          # Button, Card, Input, Textarea, Label, Badge, Select
-│   │   ├── components/Layout.tsx
-│   │   └── lib/                    # supabase client, session helpers, types
-│   └── .env.example
-└── supabase/
-    ├── migrations/20260522000000_init.sql   # reports table + RLS
-    ├── functions/analyze/index.ts            # OpenAI proxy + DB insert
-    └── config.toml
+frontend (React + Vite)  ──/api/iterate──>  server (Express)  ──>  Claude (forced tool use)
+   ├─ PocCanvas    可點擊原型（確定性渲染固定元件庫）
+   ├─ SpecPanel    需求 + AI 釐清問題
+   └─ ChatPanel    來回對話
 ```
 
----
+- PoC 不靠即時生成程式碼（live demo 會卡、會壞、規格無法同步），而是 Claude 維護一份 JSON 需求模型（IR），前端用固定元件庫**確定性渲染**。這份 IR 同時是規格、也是 PoC——就是我們的差異化核心，也是中間那層 system analysis。
+- 後端用 `@anthropic-ai/sdk`，**強制單一工具呼叫**（`tool_choice`）取得保證合法的 `ProjectSpec`。
 
-## Setup
+## 跑起來
 
-### 1. Frontend
+需要 Node 18+ 和一把 Anthropic API key。
 
 ```bash
-cd frontend
-npm install
+# 1. 裝依賴（根目錄的 server 依賴 + frontend）
+npm run setup        # = npm install && npm --prefix frontend install
+
+# 2. 設定金鑰
 cp .env.example .env
-# fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+#   編輯 .env，填入 ANTHROPIC_API_KEY=sk-ant-...
+
+# 3. 同時啟動 server(8787) + 前端(5173)
 npm run dev
 ```
 
-### 2. Supabase
+打開 http://localhost:5173 。前端 dev server 會把 `/api` 代理到 `localhost:8787`。
 
-Install the Supabase CLI if you don't have it: <https://supabase.com/docs/guides/cli>.
+### 環境變數（`.env`）
 
-```bash
-# from project root
-supabase login
-supabase link --project-ref <your-project-ref>
+| 變數 | 預設 | 說明 |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | （必填） | Anthropic 金鑰 |
+| `ANTHROPIC_MODEL` | `claude-opus-4-8` | demo 想更快可換 `claude-sonnet-4-6` |
+| `ANTHROPIC_EFFORT` | `medium` | `low`/`medium`/`high`，越低越快 |
+| `PORT` | `8787` | server 連接埠 |
 
-# apply schema
-supabase db push
+## Demo 腳本
 
-# set the OpenAI secret (server-side only)
-supabase secrets set OPENAI_API_KEY=sk-...
-# optional:
-supabase secrets set OPENAI_MODEL=gpt-4o-mini
+1. 丟一句很模糊的話：例如「我們想要一個讓市民可以線上預約活動中心場地的系統」。
+2. AI 回：拆出幾條需求（標「AI 假設」）、長出第一版 PoC、並丟 1-2 個釐清問題（要付款嗎？要審核嗎？）。
+3. 在右邊用點的回答釐清問題，或在 PoC 上點某塊「這樣 OK」→ 看那條需求即時變「已確認」。
+4. 改主意：點某塊「不太對」→ 對話框帶出草稿 → 送出 → 規格與 PoC 同步更新。
+5. 收尾：規格穩定後「匯出規格」（之後可一鍵轉成真程式碼 / 標書草稿）。
 
-# deploy the edge function
-supabase functions deploy analyze
-```
+## 技術現實（誠實面）
 
-The Edge Function is configured with `verify_jwt = false` so the anonymous frontend can call it. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
-
-### 3. Local Supabase (optional)
-
-```bash
-supabase start              # local Postgres + Functions runtime
-supabase db reset           # apply migrations
-supabase functions serve analyze --env-file ./supabase/.env.local
-```
-
-`./supabase/.env.local` should contain at minimum `OPENAI_API_KEY=...`. Point the frontend at the local Supabase URLs printed by `supabase start`.
-
----
-
-## 協作說明(給同學)
-
-我們共用一個 Supabase 專案 + 一個 GitHub repo。OpenAI key 只放在 Supabase secrets,本機任何地方都不應該有。
-
-### Onboarding(第一次加入時)
-
-```bash
-git clone <repo-url>
-cd acamatch/frontend
-npm install
-cp .env.example .env
-# 跟 owner 拿 VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY,填進 .env
-npm run dev
-```
-
-要本地改 Edge Function 或 migration 才需要這步:
-
-```bash
-npm install -g supabase                           # 或 brew install supabase/tap/supabase
-supabase login                                    # 用自己的 Supabase 帳號
-supabase link --project-ref <共用的 project ref>  # 跟 owner 拿
-```
-
-Owner 需要先到 Supabase Dashboard → Project Settings → Team → Invite member,把同學加進專案。
-
-### 機密管理
-
-| 資料 | 放哪 | 能不能傳到群組 |
-|---|---|---|
-| `VITE_SUPABASE_URL` | 本機 `.env`(gitignored) | ✅ 可以,不算機密 |
-| `VITE_SUPABASE_ANON_KEY` | 本機 `.env` | ✅ 受 RLS 保護,前端本來就會曝光 |
-| `OPENAI_API_KEY` | **只在 Supabase secrets**(`supabase secrets set`) | ❌ 永遠不要傳、不要寫進任何 `.env` |
-| `SUPABASE_SERVICE_ROLE_KEY` | 只在 Supabase 內部自動注入 Edge Function | ❌ 絕對不可外流 |
-
-`.env` 已在 `.gitignore`,但每個人都要自己檢查 `git status` 沒把 `.env` 不小心 add 進來。
-
-### 分支 / PR 流程
-
-- `main` 永遠保持可跑(能 `npm run dev` + `npm run build`)
-- 一個 feature 一個分支:`feat/landing-tweak`、`fix/analyze-error`、`chore/deps-bump`
-- 推上去開 PR,**至少 1 人 review** 後再 merge
-- 合併前自己先跑過:
-  ```bash
-  cd frontend && npm run build   # 同時跑 tsc 與 vite build
-  ```
-
-### 改動需要協調的地方
-
-| 改到這些檔案 | 流程 |
-|---|---|
-| `supabase/migrations/*.sql` | 新增一個新檔(別改舊的)。PR 描述標註「需要 db push」。Merge 後由 owner 跑 `supabase db push` |
-| `supabase/functions/analyze/index.ts` | PR 描述標註「需要 functions deploy」。Merge 後 owner 跑 `supabase functions deploy analyze` |
-| `frontend/.env.example` | 改了的話,通知所有同學更新自己的 `.env` |
-| `package.json` 加裝套件 | 一定要 commit 同步的 `package-lock.json`,同學 `git pull` 後重跑 `npm install` |
-
-### 常見坑
-
-- **改了 prompt 但沒 deploy**:Edge Function 是部署到 Supabase 雲端的,本機改完一定要 `supabase functions deploy analyze` 才會生效。
-- **同學看不到自己的 reports**:`session_id` 存在 localStorage,清快取 / 換瀏覽器 / 換電腦就會看不到舊報告 — 這是預期行為(MVP 沒做 auth)。
-- **沒裝 Supabase CLI 也能開發**:只改 `frontend/` 的人不用裝。只有要動 migration / edge function 的人才需要。
-
----
-
-## Data model
-
-`reports` (one row per analysis):
-
-| column            | type        | notes                                       |
-|-------------------|-------------|---------------------------------------------|
-| id                | uuid PK     | `gen_random_uuid()`                         |
-| session_id        | text        | client-generated UUID stored in localStorage |
-| business_problem  | text        | raw user input                              |
-| industry          | text        |                                             |
-| key_metrics       | text        |                                             |
-| budget_range      | text        |                                             |
-| result            | jsonb       | structured AI output (see `AnalysisResult`) |
-| created_at        | timestamptz |                                             |
-
-RLS:
-- `anon` may `select` all rows (the frontend filters by `session_id`).
-- Inserts are only performed by the Edge Function using the service-role key.
-
-> ⚠️ For MVP simplicity, `anon` can read any row — session IDs are not secret. Add auth (Supabase Auth) and tighten the RLS policy before any sensitive launch.
-
----
-
-## AI output shape
-
-The system prompt forces the model to return JSON:
-
-```ts
-interface AnalysisResult {
-  tech_direction: string
-  tech_keywords: string[]
-  recommended_professors: { name: string; school: string; expertise: string }[]
-  trl_score: "HIGH" | "MEDIUM" | "LOW"
-  trl_explanation: string
-  roi_estimate: string
-  implementation_advice: string
-  related_paper_count: number
-}
-```
-
-To improve grounding, replace the prompt in `supabase/functions/analyze/index.ts` with a RAG step that retrieves real papers / professors before generation.
-
----
-
-## Next steps (post-MVP)
-
-- Supabase Auth (email / Google) so reports are tied to real users.
-- Real semantic search backed by a paper corpus + pgvector.
-- Streaming responses for the Dashboard.
-- Replace mocked professor list with a verified directory.
-- Rate limiting on the Edge Function.
+不宣稱「把標案丟進去就全自動產出系統」。定位是：讓 system analysis 的人少跟客戶來回——AI 讓人做更多事，不是取代人。
