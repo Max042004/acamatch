@@ -242,6 +242,55 @@ app.post("/api/iterate", async (req, res) => {
   }
 })
 
+const TENDER_SYSTEM = `你是協助撰寫政府採購／企業招標「需求規格書（草稿）」的助理。根據給你的 ProjectSpec，產出一份結構化、可直接拿去討論的 Markdown 文件。
+
+要求：
+- 全程繁體中文，輸出「純 Markdown」，不要用程式碼區塊把整份文件包起來。
+- 結構（用 ## 標題）：
+  1. 專案概述（用 one_liner 與整體脈絡）
+  2. 需求規格（把 requirements 條列；每條標明狀態：✅已確認 / 🟡待確認(AI 假設) / 🔵待釐清。忠實反映，不要把假設講成定案）
+  3. 功能範圍（依 screens 描述各畫面要做的事）
+  4. 待釐清事項 / 釋疑清單（把 open_questions 整理成表格：問題 | 為什麼重要 | 建議選項）
+  5. 驗收標準（從已確認的需求衍生成可驗收的條目）
+  6. 備註（誠實標註：標🟡的項目是 AI 依現有對話所做的合理假設，尚待開標方確認；本文件為草稿）
+- 語氣專業、精簡，像真的招標文件，但不要編造對話裡沒有的數字、金額、法規。`
+
+app.post("/api/export", async (req, res) => {
+  try {
+    const { spec, kind } = req.body || {}
+    if (!spec) return res.status(400).json({ error: "spec is required" })
+    if (kind && kind !== "tender") return res.status(400).json({ error: `unknown kind: ${kind}` })
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured on the server" })
+    }
+
+    const response = await getClient().messages.create({
+      model: MODEL,
+      max_tokens: 6000,
+      output_config: { effort: EFFORT },
+      system: TENDER_SYSTEM,
+      messages: [
+        {
+          role: "user",
+          content: `請依下面的 ProjectSpec 產出需求規格書（草稿）。\n\nProjectSpec（JSON）：\n${JSON.stringify(spec, null, 0)}`,
+        },
+      ],
+    })
+
+    const text = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("\n")
+      .trim()
+    if (!text) return res.status(502).json({ error: "model returned no text" })
+    return res.json({ markdown: text })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error("[/api/export]", msg)
+    return res.status(500).json({ error: msg })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`\n[spec-cockpit] server on http://localhost:${PORT}  (model: ${MODEL}, effort: ${EFFORT})\n`)
 })

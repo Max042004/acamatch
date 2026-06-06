@@ -10,3 +10,14 @@ export async function iterate(messages: ChatMsg[], spec: ProjectSpec | null): Pr
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
   return data.spec as ProjectSpec
 }
+
+export async function exportDoc(spec: ProjectSpec, kind: "tender"): Promise<string> {
+  const res = await fetch("/api/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spec, kind }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`)
+  return data.markdown as string
+}
