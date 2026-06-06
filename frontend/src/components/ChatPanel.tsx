@@ -1,7 +1,8 @@
-import { type RefObject } from "react"
-import { Loader2, SendHorizonal, Sparkles } from "lucide-react"
+import { type RefObject, useEffect, useRef } from "react"
+import { Loader2, Mic, SendHorizonal, Sparkles } from "lucide-react"
 import type { ChatMsg } from "@/lib/types"
 import { STARTERS } from "@/lib/spec"
+import { useSpeech } from "@/lib/useSpeech"
 
 interface Props {
   messages: ChatMsg[]
@@ -14,9 +15,28 @@ interface Props {
 }
 
 export default function ChatPanel({ messages, draft, loading, error, inputRef, onDraft, onSend }: Props) {
+  const { supported: micSupported, listening, transcript, error: micError, start, stop } = useSpeech()
+  const baseRef = useRef("") // text already in the box when the mic started
+
+  // Stream the live transcript into the draft while listening.
+  useEffect(() => {
+    if (listening) onDraft((baseRef.current ? baseRef.current + " " : "") + transcript)
+  }, [transcript, listening])
+
+  function toggleMic() {
+    if (listening) {
+      stop()
+      return
+    }
+    baseRef.current = draft.trim()
+    start()
+    inputRef.current?.focus()
+  }
+
   function submit() {
     const t = draft.trim()
     if (!t || loading) return
+    if (listening) stop()
     onSend(t)
   }
 
@@ -90,6 +110,25 @@ export default function ChatPanel({ messages, draft, loading, error, inputRef, o
             className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-sky-500"
           />
           <button
+            onClick={toggleMic}
+            disabled={!micSupported || loading}
+            title={
+              micSupported
+                ? listening
+                  ? "停止語音輸入"
+                  : "語音輸入（中文）"
+                : "此瀏覽器不支援語音輸入（建議用 Chrome）"
+            }
+            className={
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border " +
+              (listening
+                ? "animate-pulse border-rose-500 bg-rose-500/15 text-rose-300"
+                : "border-input bg-background text-foreground/70 hover:bg-accent disabled:opacity-40")
+            }
+          >
+            <Mic className="h-4 w-4" />
+          </button>
+          <button
             onClick={submit}
             disabled={loading || !draft.trim()}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-sky-600 text-white disabled:opacity-40"
@@ -97,6 +136,8 @@ export default function ChatPanel({ messages, draft, loading, error, inputRef, o
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizonal className="h-4 w-4" />}
           </button>
         </div>
+        {listening && <div className="mt-1.5 text-[11px] text-rose-300">● 聆聽中…再按一次麥克風停止</div>}
+        {micError && <div className="mt-1.5 text-[11px] text-rose-300">{micError}</div>}
       </div>
     </div>
   )
