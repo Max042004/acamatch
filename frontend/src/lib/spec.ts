@@ -1,20 +1,21 @@
 import type { ProjectSpec, Requirement } from "./types"
 
 export const EMPTY_SPEC: ProjectSpec = {
-  title: "尚未命名的專案",
-  one_liner: "把一句模糊的需求丟進對話框，規格與 PoC 會同時長出來。",
+  title: "未命名提案專案",
+  one_liner: "貼上標案文件、會議筆記或訪談逐字稿，先拆出可提案、可估價、可驗收的輪廓。",
   assistant_message: "",
+  workflow: "pre_sales",
+  source_summary: "",
+  stakeholders: [],
+  business_process: [],
   requirements: [],
   open_questions: [],
+  risks: [],
+  acceptance_criteria: [],
+  proposal_materials: [],
+  wbs: [],
   screens: [],
 }
-
-// Opening lines a 開標方 might actually say — deliberately vague.
-export const STARTERS = [
-  "我們想要一個讓市民可以線上預約活動中心場地的系統",
-  "做一個民眾查詢案件辦理進度的網站",
-  "想要一個廠商上傳投標文件、我們線上審查的平台",
-]
 
 // Client-side confirmation is authoritative. After the model returns a fresh
 // spec, re-stamp any requirement the user confirmed on the PoC back to
@@ -45,6 +46,8 @@ export function setRequirementStatus(
 
 export function countByStatus(spec: ProjectSpec) {
   const c = { confirmed: 0, assumed: 0, open: 0 }
-  for (const r of spec.requirements) c[r.status]++
+  for (const r of Array.isArray(spec.requirements) ? spec.requirements : []) {
+    if (r.status === "confirmed" || r.status === "assumed" || r.status === "open") c[r.status]++
+  }
   return c
 }

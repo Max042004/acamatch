@@ -10,9 +10,8 @@ interface Props {
   onClose: () => void
 }
 
-// Preview for the generated 需求規格書 / 標書草稿. Dependency-free: shows the raw
-// Markdown in a scrollable pane with copy + download. The download is the real
-// deliverable; the preview is the demo beat ("看，標書草稿剛剛長出來了").
+// Preview for the generated pre-sales proposal package. Dependency-free: shows
+// the raw Markdown in a scrollable pane with copy + download.
 export default function ExportModal({ title, filename, markdown, loading, error, onClose }: Props) {
   const [copied, setCopied] = useState(false)
 
@@ -73,7 +72,7 @@ export default function ExportModal({ title, filename, markdown, loading, error,
           {loading && (
             <div className="flex h-full flex-col items-center justify-center text-sm text-muted-foreground">
               <Loader2 className="mb-3 h-6 w-6 animate-spin text-sky-400" />
-              正在從已確認的規格產生標書草稿…
+              正在從已確認的規格產生提案附件包…
             </div>
           )}
           {error && (

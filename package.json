@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "邊講邊出 PoC — 對話現場同時長出『規格』與『可點擊原型』的需求釐清引擎",
+  "description": "Acamatch — SI pre-sales 階段的 AI 需求澄清、PoC 與提案附件工作台",
   "scripts": {
     "dev": "concurrently -k -n server,web -c cyan,magenta \"npm:server\" \"npm:web\"",
     "server": "node server/index.mjs",
@@ -14,7 +14,8 @@
     "@anthropic-ai/sdk": "^0.69.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

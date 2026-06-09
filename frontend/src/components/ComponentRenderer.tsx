@@ -11,7 +11,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <div className="font-bold text-slate-800">{p.brand || "Logo"}</div>
           <div className="flex gap-4 text-sm text-slate-500">
-            {(p.links || []).map((l: string, i: number) => (
+            {asStringArray(p.links).map((l, i) => (
               <span key={i}>{l}</span>
             ))}
           </div>
@@ -60,7 +60,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
         <div className="px-5 py-2">
           {p.label && <div className="mb-1 text-sm font-medium text-slate-700">{p.label}</div>}
           <div className="flex h-9 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-500">
-            <span>{(p.options && p.options[0]) || "請選擇"}</span>
+            <span>{asStringArray(p.options)[0] || "請選擇"}</span>
             <span className="text-slate-400">▾</span>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
         <div className="px-5 py-2">
           {p.label && <div className="mb-2 text-sm font-medium text-slate-700">{p.label}</div>}
           <div className="flex flex-wrap gap-2">
-            {(p.slots || []).map((s: string, i: number) => (
+            {asStringArray(p.slots).map((s, i) => (
               <span
                 key={i}
                 className={
@@ -152,7 +152,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
         <div className="px-5 py-2">
           {p.title && <div className="mb-1 text-sm font-medium text-slate-700">{p.title}</div>}
           <ul className="space-y-1">
-            {(p.items || []).map((it: string, i: number) => (
+            {asStringArray(p.items).map((it, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
                 {it}
@@ -169,7 +169,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
-                  {(p.columns || []).map((col: string, i: number) => (
+                  {asStringArray(p.columns).map((col, i) => (
                     <th key={i} className="px-3 py-2 font-medium">
                       {col}
                     </th>
@@ -177,7 +177,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
                 </tr>
               </thead>
               <tbody>
-                {(p.rows || []).map((row: string[], ri: number) => (
+                {asRows(p.rows).map((row, ri) => (
                   <tr key={ri} className="border-t border-slate-100 text-slate-600">
                     {row.map((cell, ci) => (
                       <td key={ci} className="px-3 py-2">
@@ -195,7 +195,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
     case "steps":
       return (
         <div className="flex flex-wrap items-center gap-2 px-5 py-3">
-          {(p.items || []).map((it: string, i: number) => (
+          {asStringArray(p.items).map((it, i, items) => (
             <div key={i} className="flex items-center gap-2">
               <span
                 className={
@@ -206,7 +206,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
                 {i + 1}
               </span>
               <span className="text-sm text-slate-600">{it}</span>
-              {i < (p.items || []).length - 1 && <span className="mx-1 text-slate-300">›</span>}
+              {i < items.length - 1 && <span className="mx-1 text-slate-300">›</span>}
             </div>
           ))}
         </div>
@@ -254,7 +254,7 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
       return (
         <div className="px-5 py-2">
           <div className="flex h-32 items-center justify-center rounded-md bg-slate-100 text-xs text-slate-400">
-            🖼 {p.caption || "圖片"}
+            {p.caption || "圖片預留區"}
           </div>
         </div>
       )
@@ -262,4 +262,14 @@ export default function ComponentRenderer({ c }: { c: PocComponent }) {
     default:
       return null
   }
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.map((item) => String(item))
+}
+
+function asRows(value: unknown): string[][] {
+  if (!Array.isArray(value)) return []
+  return value.map((row) => (Array.isArray(row) ? row.map((cell) => String(cell)) : [String(row)]))
 }
