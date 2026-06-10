@@ -30,96 +30,114 @@ export default function PocCanvas({ spec, confirmedComponentIds, loading, onConf
   }
 
   return (
-    <div className="space-y-6">
-      {screens.map((screen) => (
-        <div key={screen.id}>
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="rounded bg-accent px-2 py-0.5 font-medium text-foreground/80">{screen.name}</span>
-          </div>
+    <div className="h-full overflow-y-auto space-y-6 p-2 pb-12">
+      {screens.map((screen) => {
+        // 確保 comps 是一個陣列，避免 undefined 報錯
+        const comps = Array.isArray(screen.components) ? screen.components : []
 
-          {/* The light "device" surface — reads as a real product preview */}
-          <div className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-lg">
-            {(Array.isArray(screen.components) ? screen.components : []).map((c) => {
-              const isConfirmed = confirmedComponentIds.has(c.id)
-              const isOpen = selected === c.id
-              const req = requirements.find((r) => r.id === c.reqRef)
-              return (
-                <div
-                  key={c.id}
-                  className="group relative cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSelected(isOpen ? null : c.id)
-                  }}
-                >
-                  {/* hover / selected / confirmed highlight */}
+        return (
+          // 加上 shrink-0 確保整個畫面區塊在滾動視窗中絕對不會被壓縮
+          <div key={screen.id} className="flex shrink-0 flex-col">
+            
+            {/* 標題與除錯資訊列 */}
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-accent px-2 py-0.5 font-medium text-foreground/80">
+                  {screen.name}
+                </span>
+              </div>
+              {/* 👉 除錯指標：如果這裡顯示 6，代表 AI 真的只給了 6 個 */}
+              <div className="font-medium text-sky-500/80">
+                AI 共生成了 {comps.length} 個 UI 元件
+              </div>
+            </div>
+
+            {/* The light "device" surface */}
+            {/* 加上 flex flex-col 確保子層垂直排列，防止任何高度塌陷 */}
+            <div className="flex flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-lg">
+              {comps.map((c) => {
+                const isConfirmed = confirmedComponentIds.has(c.id)
+                const isOpen = selected === c.id
+                const req = requirements.find((r) => r.id === c.reqRef)
+                
+                return (
                   <div
-                    className={
-                      "pointer-events-none absolute inset-0 z-10 rounded-sm transition " +
-                      (isConfirmed
-                        ? "ring-2 ring-inset ring-emerald-400/70"
-                        : isOpen
-                          ? "ring-2 ring-inset ring-sky-500"
-                          : "ring-0 group-hover:ring-2 group-hover:ring-inset group-hover:ring-sky-300")
-                    }
-                  />
-
-                  {isConfirmed && (
-                    <div className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-medium text-white">
-                      <Check className="h-3 w-3" /> 已確認
-                    </div>
-                  )}
-
-                  <div
-                    className={
-                      "pointer-events-none absolute left-2 top-2 z-20 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm " +
-                      (req
-                        ? "bg-sky-600 text-white"
-                        : "border border-amber-300 bg-amber-50 text-amber-700")
-                    }
+                    key={c.id}
+                    className="group relative cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelected(isOpen ? null : c.id)
+                    }}
                   >
-                    {req ? `REQ ${req.id}` : "未對應需求"}
-                  </div>
-
-                  <ComponentRenderer c={c} />
-
-                  {isOpen && (
+                    {/* hover / selected / confirmed highlight */}
                     <div
-                      className="absolute right-3 top-3 z-30 w-52 rounded-lg border border-border bg-popover p-2 text-left shadow-xl"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="px-1 pb-2 text-xs text-muted-foreground">
-                        這塊（{labelFor(c)}）
-                        {c.reqRef && <span className="text-sky-400"> · 連到 {c.reqRef}</span>}
+                      className={
+                        "pointer-events-none absolute inset-0 z-10 rounded-sm transition " +
+                        (isConfirmed
+                          ? "ring-2 ring-inset ring-emerald-400/70"
+                          : isOpen
+                            ? "ring-2 ring-inset ring-sky-500"
+                            : "ring-0 group-hover:ring-2 group-hover:ring-inset group-hover:ring-sky-300")
+                      }
+                    />
+
+                    {isConfirmed && (
+                      <div className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-medium text-white">
+                        <Check className="h-3 w-3" /> 已確認
                       </div>
-                      <RequirementTrace requirement={req} reqRef={c.reqRef} />
-                      <button
-                        className="mb-1 flex w-full items-center gap-2 rounded-md bg-emerald-500/15 px-2.5 py-2 text-sm text-emerald-300 hover:bg-emerald-500/25"
-                        onClick={() => {
-                          onConfirm(c)
-                          setSelected(null)
-                        }}
-                      >
-                        <Check className="h-4 w-4" /> 這樣 OK，記進規格
-                      </button>
-                      <button
-                        className="flex w-full items-center gap-2 rounded-md bg-accent px-2.5 py-2 text-sm text-foreground/80 hover:bg-accent/70"
-                        disabled={loading}
-                        onClick={() => {
-                          onReject(c)
-                          setSelected(null)
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" /> 不太對，我要改
-                      </button>
+                    )}
+
+                    <div
+                      className={
+                        "pointer-events-none absolute left-2 top-2 z-20 rounded-full px-2 py-0.5 text-[10px] font-medium shadow-sm " +
+                        (req
+                          ? "bg-sky-600 text-white"
+                          : "border border-amber-300 bg-amber-50 text-amber-700")
+                      }
+                    >
+                      {req ? `REQ ${req.id}` : "未對應需求"}
                     </div>
-                  )}
-                </div>
-              )
-            })}
+
+                    <ComponentRenderer c={c} />
+
+                    {isOpen && (
+                      <div
+                        className="absolute right-3 top-3 z-30 w-52 rounded-lg border border-border bg-popover p-2 text-left shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="px-1 pb-2 text-xs text-muted-foreground">
+                          這塊（{labelFor(c)}）
+                          {c.reqRef && <span className="text-sky-400"> · 連到 {c.reqRef}</span>}
+                        </div>
+                        <RequirementTrace requirement={req} reqRef={c.reqRef} />
+                        <button
+                          className="mb-1 flex w-full items-center gap-2 rounded-md bg-emerald-500/15 px-2.5 py-2 text-sm text-emerald-300 hover:bg-emerald-500/25"
+                          onClick={() => {
+                            onConfirm(c)
+                            setSelected(null)
+                          }}
+                        >
+                          <Check className="h-4 w-4" /> 這樣 OK，記進規格
+                        </button>
+                        <button
+                          className="flex w-full items-center gap-2 rounded-md bg-accent px-2.5 py-2 text-sm text-foreground/80 hover:bg-accent/70"
+                          disabled={loading}
+                          onClick={() => {
+                            onReject(c)
+                            setSelected(null)
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" /> 不太對，我要改
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

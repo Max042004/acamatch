@@ -3,15 +3,18 @@ import { Braces, BriefcaseBusiness, ChevronDown, Code2, Download, FileText } fro
 import type { ChatMsg, DocumentAnalysis, DocumentSection, PocComponent, ProjectSpec } from "@/lib/types"
 import { exportDoc, iterate } from "@/lib/api"
 import { EMPTY_SPEC, applyConfirmed, setRequirementStatus } from "@/lib/spec"
+//import { applyConfirmed, setRequirementStatus } from "@/lib/spec"
 import { specToHtml } from "@/lib/codegen"
 import PocCanvas from "./PocCanvas"
 import SpecPanel from "./SpecPanel"
 import ChatPanel from "./ChatPanel"
 import ExportModal from "./ExportModal"
+//import mockSpec from "../fixtures/mockSpec2.json"
 
 export default function Cockpit() {
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [spec, setSpec] = useState<ProjectSpec>(EMPTY_SPEC)
+  //const [spec, setSpec] = useState<ProjectSpec>(mockSpec as any)
   const [confirmedReqIds, setConfirmedReqIds] = useState<Set<string>>(new Set())
   const [confirmedComponentIds, setConfirmedComponentIds] = useState<Set<string>>(new Set())
   const [draft, setDraft] = useState("")
@@ -28,6 +31,7 @@ export default function Cockpit() {
   const [docError, setDocError] = useState<string | null>(null)
 
   const started = messages.length > 0
+  //const started = true
 
   async function send(text: string, displayText?: string) {
     if (loading) return
@@ -359,6 +363,7 @@ export default function Cockpit() {
       </header>
 
       {/* Body: left (PoC + chat) | right (spec) */}
+      {/*
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_360px]">
         <div className="flex min-h-0 flex-col border-r border-border/60">
           <div className="min-h-0 flex-1 overflow-y-auto bg-[#0c1322] p-5">
@@ -396,6 +401,49 @@ export default function Cockpit() {
             }
           />
         </aside>
+      </div>*/}
+      {/* Body: left (chat) | middle (PoC) | right (spec) - 比例調整為 1:2:1 */}
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        
+        {/* 左側：ChatPanel (佔 1/4 = 25%) */}
+        <div className="flex h-[40vh] shrink-0 flex-col border-b border-border/60 lg:h-auto lg:w-1/4 lg:border-b-0 lg:border-r">
+          <ChatPanel
+            messages={messages}
+            draft={draft}
+            loading={loading}
+            error={error}
+            inputRef={inputRef}
+            onDraft={setDraft}
+            onSend={send}
+            onAnalyzeFile={analyzeFile}
+          />
+        </div>
+
+        {/* 中間：PocCanvas (佔 2/4 = 50%) */}
+        <div className="relative flex min-h-0 lg:w-1/2 flex-col overflow-hidden bg-[#0c1322] p-5">
+          <PocCanvas
+            spec={spec}
+            confirmedComponentIds={confirmedComponentIds}
+            loading={loading}
+            onConfirm={confirmComponent}
+            onReject={rejectComponent}
+          />
+        </div>
+
+        {/* 右側：SpecPanel (佔 1/4 = 25%) */}
+        <aside className="hidden min-h-0 flex-col border-t border-border/60 lg:flex lg:w-1/4 lg:border-l lg:border-t-0">
+          <SpecPanel
+            spec={spec}
+            analysis={analysis}
+            loading={loading}
+            onConfirmReq={(id) => confirmReqId(id, "你確認了這條")}
+            onAnswer={send}
+            onSelectAnalysisSection={(id) =>
+              setAnalysis((current) => (current ? { ...current, selectedSectionId: id } : current))
+            }
+          />
+        </aside>
+        
       </div>
 
       {docOpen && (
